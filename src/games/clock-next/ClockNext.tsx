@@ -365,8 +365,8 @@ export default function ClockNext() {
           margin: '6px 0 0',
         }}>
           {level === 1
-            ? 'Read the clock, pick the next hour!'
-            : 'Read the time, set the clock!'}
+            ? 'Read the time, set the clock!'
+            : 'Read the clock, pick the next hour!'}
         </p>
       </div>
 
@@ -433,8 +433,8 @@ export default function ClockNext() {
         maxWidth: '500px',
         margin: '0 auto',
       }}>
-        {level === 1 ? (
-          /* LEVEL 1: Clock displayed → pick next hour from text */
+        {level === 2 ? (
+          /* LEVEL 2: Clock displayed → pick next hour from text */
           <>
             <div key={`clock-${animKey}`} style={{
               animation: 'popIn 0.4s cubic-bezier(0.34,1.56,0.64,1)',
@@ -517,7 +517,7 @@ export default function ClockNext() {
             </div>
           </>
         ) : (
-          /* LEVEL 2: Text displayed → drag clock hand */
+          /* LEVEL 1: Text displayed → drag clock hand */
           <>
             <div key={`text-${animKey}`} style={{
               background: 'white',
