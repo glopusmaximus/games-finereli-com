@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import Clock from './Clock';
 
-type Level = 1 | 2 | 3 | 4;
+type Level = 1 | 2 | 3;
 
 const STORAGE_KEY_LEVEL = 'readOClockLevel';
 const STORAGE_KEY_STARS = 'readOClockStars';
@@ -30,17 +30,18 @@ interface Activity {
 }
 
 const ACTIVITIES: Activity[] = [
-  { name: 'Wake up', emoji: '🌅', hour: 7, period: 'am' },
-  { name: 'Breakfast', emoji: '🥣', hour: 8, period: 'am' },
-  { name: 'Kindergarten', emoji: '🏫', hour: 9, period: 'am' },
-  { name: 'Snack', emoji: '🍎', hour: 11, period: 'am' },
-  { name: 'Home', emoji: '🏠', hour: 2, period: 'pm' },
-  { name: 'Lunch', emoji: '🍽️', hour: 3, period: 'pm' },
-  { name: 'Playground', emoji: '🛝', hour: 4, period: 'pm' },
-  { name: 'Dinner', emoji: '🍕', hour: 7, period: 'pm' },
+  { name: 'wake up', emoji: '🌅', hour: 7, period: 'am' },
+  { name: 'breakfast', emoji: '🥣', hour: 8, period: 'am' },
+  { name: 'school', emoji: '🏫', hour: 9, period: 'am' },
+  { name: 'snack', emoji: '🍎', hour: 11, period: 'am' },
+  { name: 'home', emoji: '🏠', hour: 2, period: 'pm' },
+  { name: 'lunch', emoji: '🍽️', hour: 3, period: 'pm' },
+  { name: 'capoeira', emoji: '🥋', hour: 4, period: 'pm' },
+  { name: 'playground', emoji: '🛝', hour: 5, period: 'pm' },
+  { name: 'dinner', emoji: '🍕', hour: 7, period: 'pm' },
   { name: 'TV', emoji: '📺', hour: 8, period: 'pm' },
-  { name: 'Reading', emoji: '📖', hour: 9, period: 'pm' },
-  { name: 'Sleep', emoji: '😴', hour: 10, period: 'pm' },
+  { name: 'reading', emoji: '📖', hour: 9, period: 'pm' },
+  { name: 'sleep', emoji: '😴', hour: 10, period: 'pm' },
 ];
 
 // --- Helpers ---
@@ -54,7 +55,7 @@ function setStored(key: string, value: string) {
 
 function getStoredLevel(): Level {
   const v = parseInt(getStored(STORAGE_KEY_LEVEL, '1'), 10);
-  return (v >= 1 && v <= 4 ? v : 1) as Level;
+  return (v >= 1 && v <= 3 ? v : 1) as Level;
 }
 
 function getStoredStars(): number {
@@ -160,28 +161,6 @@ function DraggableClock({ size, selectedHour, onHourChange, period }: DraggableC
       {period && <circle cx={cx} cy={cy} r="48" fill={isAm ? '#E3F2FD' : '#0d0d2b'} />}
 
       <circle cx={cx} cy={cy} r="46" fill={faceColor} stroke={strokeColor} strokeWidth="2.5" />
-
-      {/* Sun/moon */}
-      {isAm && (
-        <>
-          <circle cx={cx} cy={8} r="5" fill="#F9CA24" opacity="0.9" />
-          {[0, 45, 90, 135, 180, 225, 270, 315].map(deg => {
-            const rad = deg * Math.PI / 180;
-            return <line key={deg} x1={cx + 7 * Math.cos(rad)} y1={8 + 7 * Math.sin(rad)}
-              x2={cx + 9.5 * Math.cos(rad)} y2={8 + 9.5 * Math.sin(rad)}
-              stroke="#F9CA24" strokeWidth="1" strokeLinecap="round" opacity="0.7" />;
-          })}
-        </>
-      )}
-      {isPm && (
-        <>
-          <circle cx={cx - 1} cy={8} r="4.5" fill="#c0c0e0" opacity="0.9" />
-          <circle cx={cx + 1.5} cy={6.5} r="3.5" fill="#0d0d2b" />
-          <circle cx={cx - 12} cy={6} r="0.8" fill="#e0e0ff" opacity="0.7" />
-          <circle cx={cx + 10} cy={10} r="0.6" fill="#e0e0ff" opacity="0.5" />
-          <circle cx={cx + 15} cy={5} r="0.7" fill="#e0e0ff" opacity="0.6" />
-        </>
-      )}
 
       {/* Minute dots */}
       {Array.from({ length: 60 }, (_, i) => {
@@ -297,7 +276,7 @@ export default function ClockNext() {
   const [stars, setStars] = useState(getStoredStars);
   const [sessionStars, setSessionStars] = useState(0);
 
-  const isActivityLevel = level >= 3;
+  const isActivityLevel = level === 3;
 
   const initRound = useCallback((indices: number[], idx: number, lvl: Level) => {
     const val = indices[idx];
@@ -385,18 +364,6 @@ export default function ClockNext() {
     handleAnswer(dragHour);
   }, [currentHour, dragHour, handleAnswer]);
 
-  // Level 3: compare dragHour to activity's hour, but route through the index-based answer system
-  const handleDragSubmitActivity = useCallback((correctHour: number) => {
-    if (currentIndex == null) return;
-    if (dragHour === correctHour) {
-      // Correct — pass the right index so handleAnswer sees a match
-      handleAnswer(currentIndex);
-    } else {
-      // Wrong — pass -1 so it triggers the wrong path without eliminating a real option
-      handleAnswer(-1);
-    }
-  }, [currentIndex, dragHour, handleAnswer]);
-
   const handleLevelChange = (newLevel: Level) => {
     setLevel(newLevel);
     setStored(STORAGE_KEY_LEVEL, String(newLevel));
@@ -480,35 +447,8 @@ export default function ClockNext() {
         </div>
       </>
     );
-  } else if (level === 3) {
-    // LEVEL 3: Activity text → drag clock hand (clock shows AM/PM)
-    const act = currentActivity!;
-    gameContent = (
-      <>
-        <div key={`act-${animKey}`} style={{
-          background: 'white', border: '2.5px solid #a55eea', borderRadius: '16px',
-          padding: '14px 24px', boxShadow: '0 4px 16px #a55eea20',
-          animation: 'popIn 0.4s cubic-bezier(0.34,1.56,0.64,1)',
-          textAlign: 'center',
-        }}>
-          <span style={{ fontSize: 'clamp(1.8rem, 6vw, 2.4rem)' }}>{act.emoji}</span>
-          <p style={{ fontSize: 'clamp(1.2rem, 4vw, 1.6rem)', fontWeight: 900, color: 'var(--color-text)', margin: '4px 0 0' }}>
-            {act.name}
-          </p>
-        </div>
-        <p style={{ color: '#8a8a9b', fontSize: '0.9rem', fontWeight: 800, textAlign: 'center', margin: 0 }}>
-          When is this? Move the hand!
-        </p>
-        <div style={{ animation: 'popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) 0.1s both' }}>
-          <DraggableClock size={clockSize} selectedHour={dragHour} onHourChange={setDragHour} period={act.period} />
-        </div>
-        <p style={{ fontSize: '1rem', fontWeight: 800, color: '#8a8a9b', margin: 0 }}>{formatHourText(dragHour)}</p>
-        <EncouragementAndAction encouragement={encouragement} shakeKey={shakeKey} state={state}
-          onSubmit={() => handleDragSubmitActivity(act.hour)} />
-      </>
-    );
   } else {
-    // LEVEL 4: Clock with AM/PM → pick activity from 3 text options
+    // LEVEL 3: Clock with AM/PM → pick activity from 3 text options
     const act = currentActivity!;
     gameContent = (
       <>
@@ -523,7 +463,7 @@ export default function ClockNext() {
           {options.map((actIdx, i) => {
             const a = ACTIVITIES[actIdx];
             return (
-              <OptionButton key={`${animKey}-${actIdx}`} label={`${a.emoji} ${a.name}`}
+              <OptionButton key={`${animKey}-${actIdx}`} label={a.name}
                 isEliminated={eliminatedOptions.has(actIdx)} isCorrect={actIdx === currentIndex}
                 state={state} onClick={() => handleAnswer(actIdx)} animDelay={i * 0.08} />
             );
@@ -554,7 +494,7 @@ export default function ClockNext() {
           display: 'flex', background: 'white', borderRadius: '50px', padding: '3px',
           boxShadow: 'var(--shadow)', border: '2px solid var(--color-border)',
         }}>
-          {([1, 2, 3, 4] as Level[]).map(lvl => (
+          {([1, 2, 3] as Level[]).map(lvl => (
             <button key={lvl} onClick={() => handleLevelChange(lvl)}
               style={{
                 border: 'none', borderRadius: '50px', padding: '6px 12px',

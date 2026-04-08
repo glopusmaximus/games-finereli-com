@@ -44,36 +44,6 @@ export default function Clock({ hour, minute, size = 240, animate = false, perio
       {/* Clock face */}
       <circle cx={cx} cy={cy} r="46" fill={faceColor} stroke={strokeColor} strokeWidth="2.5" />
 
-      {/* Sun or moon icon — top of clock, outside the face */}
-      {isAm && (
-        <>
-          {/* Sun */}
-          <circle cx={cx} cy={8} r="5" fill="#F9CA24" opacity="0.9" />
-          {/* Rays */}
-          {[0, 45, 90, 135, 180, 225, 270, 315].map(deg => {
-            const rad = deg * Math.PI / 180;
-            return (
-              <line key={deg}
-                x1={cx + 7 * Math.cos(rad)} y1={8 + 7 * Math.sin(rad)}
-                x2={cx + 9.5 * Math.cos(rad)} y2={8 + 9.5 * Math.sin(rad)}
-                stroke="#F9CA24" strokeWidth="1" strokeLinecap="round" opacity="0.7"
-              />
-            );
-          })}
-        </>
-      )}
-      {isPm && (
-        <>
-          {/* Moon crescent */}
-          <circle cx={cx - 1} cy={8} r="4.5" fill="#c0c0e0" opacity="0.9" />
-          <circle cx={cx + 1.5} cy={6.5} r="3.5" fill="#0d0d2b" />
-          {/* Stars */}
-          <circle cx={cx - 12} cy={6} r="0.8" fill="#e0e0ff" opacity="0.7" />
-          <circle cx={cx + 10} cy={10} r="0.6" fill="#e0e0ff" opacity="0.5" />
-          <circle cx={cx + 15} cy={5} r="0.7" fill="#e0e0ff" opacity="0.6" />
-        </>
-      )}
-
       {/* Minute dots */}
       {Array.from({ length: 60 }, (_, i) => {
         if (i % 5 === 0) return null;
