@@ -16,4 +16,11 @@ export const games: GameEntry[] = [
     icon: '🔗',
     component: lazy(() => import('./word-chain/WordChain')),
   },
+  {
+    slug: 'clock-next',
+    title: 'What Comes Next?',
+    description: 'Learn to read clocks and tell time — read the hour, find what comes next!',
+    icon: '🕐',
+    component: lazy(() => import('./clock-next/ClockNext')),
+  },
 ];
