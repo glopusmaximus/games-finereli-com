@@ -70,8 +70,6 @@ const PALETTE = [
   '#0fb9b1', '#8854d0', '#fa8231',
 ];
 
-const ALPHABET = 'abcdefghijklmnopqrstuvwxyz'.split('');
-
 const CARD_COLORS = [
   { bg: '#FFF5F5', border: '#FF6B6B', shadow: '#FF6B6B30' },
   { bg: '#FFF9F0', border: '#FF9F43', shadow: '#FF9F4330' },
@@ -104,9 +102,6 @@ export default function WordChain() {
     try { localStorage.setItem(STORAGE_KEY, String(newLevel)); } catch { /* noop */ }
     generate(newLevel);
   };
-
-  const covered = new Set(chain.join('').split(''));
-  const coveredCount = covered.size;
 
   return (
     <div style={{
@@ -302,84 +297,6 @@ export default function WordChain() {
         )}
       </div>
 
-      {/* Alphabet Coverage */}
-      {chain.length > 0 && (
-        <div style={{
-          maxWidth: '580px',
-          margin: '0 auto',
-          background: 'white',
-          borderRadius: '24px',
-          padding: '20px 24px',
-          boxShadow: '0 4px 24px rgba(90,90,160,0.10)',
-          border: '2px solid #f0f0fa',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '14px' }}>
-            <span style={{ fontSize: '1.2rem' }}>🌈</span>
-            <h3 style={{
-              margin: 0, fontWeight: 900, color: '#5a5a7a',
-              fontSize: '1rem', letterSpacing: '0.3px',
-            }}>
-              Letters Used
-            </h3>
-            <span style={{
-              background: 'linear-gradient(135deg, #a55eea, #4b7bec)',
-              color: 'white', borderRadius: '50px',
-              padding: '2px 10px', fontSize: '0.8rem', fontWeight: 800,
-            }}>
-              {coveredCount} / 26
-            </span>
-          </div>
-          <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '5px',
-            justifyContent: 'center',
-          }}>
-            {ALPHABET.map((l, i) => {
-              const hit = covered.has(l);
-              const color = PALETTE[i % PALETTE.length];
-              return (
-                <div
-                  key={l}
-                  title={hit ? `"${l}" appears in the chain!` : `"${l}" not used yet`}
-                  style={{
-                    width: '34px',
-                    height: '34px',
-                    borderRadius: '9px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 900,
-                    fontSize: '0.9rem',
-                    background: hit ? color : '#f3f3f8',
-                    color: hit ? 'white' : '#c8c8d8',
-                    boxShadow: hit ? `0 3px 8px ${color}50` : 'none',
-                    transition: 'all 0.4s',
-                    textTransform: 'uppercase',
-                    animation: hit ? `popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) ${i * 0.02}s both` : 'none',
-                  }}
-                >
-                  {l}
-                </div>
-              );
-            })}
-          </div>
-          <p style={{
-            textAlign: 'center',
-            color: '#a0a0b8',
-            fontSize: '0.78rem',
-            fontWeight: 700,
-            marginTop: '12px',
-            marginBottom: 0,
-          }}>
-            {coveredCount >= 20
-              ? '🎉 Amazing coverage!'
-              : coveredCount >= 15
-              ? '⭐ Great coverage!'
-              : 'Try more words to cover more letters!'}
-          </p>
-        </div>
-      )}
     </div>
   );
 }
