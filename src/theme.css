@@ -1,0 +1,73 @@
+/* Self-hosted Nunito — offline-safe */
+@font-face {
+  font-family: 'Nunito';
+  font-style: normal;
+  font-weight: 700 900;
+  font-display: swap;
+  src: url('/fonts/nunito-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+    U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+    U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  /* Typography */
+  --font-family: 'Nunito', 'Trebuchet MS', sans-serif;
+  --font-weight-bold: 700;
+  --font-weight-heavy: 800;
+  --font-weight-black: 900;
+
+  /* Core palette */
+  --color-bg: linear-gradient(160deg, #FEF9F2 0%, #F0F7FF 50%, #FBF0FF 100%);
+  --color-surface: #ffffff;
+  --color-primary: #a55eea;
+  --color-primary-alt: #4b7bec;
+  --color-accent-red: #FF6B6B;
+  --color-accent-orange: #FF9F43;
+  --color-accent-yellow: #F9CA24;
+  --color-accent-green: #26de81;
+  --color-accent-blue: #45aaf2;
+  --color-accent-purple: #a55eea;
+  --color-accent-teal: #2bcbba;
+  --color-accent-pink: #fc5c65;
+
+  /* Text */
+  --color-text: #3a3a5a;
+  --color-text-light: #8a8a9b;
+  --color-text-muted: #b0b0c8;
+
+  /* Borders & shadows */
+  --color-border: #f0f0f8;
+  --radius: 16px;
+  --radius-sm: 9px;
+  --radius-pill: 50px;
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 6px 24px rgba(90, 90, 160, 0.10);
+  --shadow-color: rgba(0, 0, 0, 0.08);
+
+  /* Spacing */
+  --space-xs: 6px;
+  --space-sm: 10px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+}
+
+/* Global reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-family);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+}

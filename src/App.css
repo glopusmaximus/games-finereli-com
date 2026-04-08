@@ -1,0 +1,83 @@
+/* Shared animations — available to all games */
+@keyframes popIn {
+  0% { opacity: 0; transform: scale(0.4) translateY(10px); }
+  70% { transform: scale(1.08) translateY(-3px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+
+/* Home page */
+.home {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--color-bg);
+  padding: var(--space-lg) var(--space-md) 40px;
+}
+
+.home-header {
+  text-align: center;
+  margin-bottom: var(--space-xl);
+  animation: fadeIn 0.5s ease-out;
+}
+
+.home-title {
+  font-size: clamp(2rem, 7vw, 3.2rem);
+  font-weight: var(--font-weight-black);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-alt));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+.home-subtitle {
+  color: var(--color-text-light);
+  font-size: 1rem;
+  font-weight: var(--font-weight-bold);
+  margin-top: var(--space-xs);
+  letter-spacing: 0.3px;
+}
+
+/* Game grid */
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-md);
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 var(--space-sm);
+}
+
+/* Loading spinner */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  font-size: 1.2rem;
+  font-weight: var(--font-weight-heavy);
+  color: var(--color-text-muted);
+  animation: pulse 1.2s infinite;
+}
+
+/* Game wrapper */
+.game-view {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--color-bg);
+}
