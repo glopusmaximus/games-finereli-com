@@ -18,8 +18,8 @@ export const games: GameEntry[] = [
   },
   {
     slug: 'clock-next',
-    title: 'What Comes Next?',
-    description: 'Learn to read clocks and tell time — read the hour, find what comes next!',
+    title: 'Read O\'Clock',
+    description: 'Learn to read clocks and tell time! Collect stars along the way.',
     icon: '🕐',
     component: lazy(() => import('./clock-next/ClockNext')),
   },

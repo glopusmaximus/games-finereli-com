@@ -3,7 +3,8 @@ import Clock from './Clock';
 
 type Level = 1 | 2;
 
-const STORAGE_KEY = 'clockNextLevel';
+const STORAGE_KEY_LEVEL = 'readOClockLevel';
+const STORAGE_KEY_STARS = 'readOClockStars';
 const ROUNDS = 10;
 
 const HOUR_WORDS: Record<number, string> = {
@@ -19,12 +20,19 @@ const ENCOURAGEMENTS = [
   'Try another one!',
 ];
 
+function getStored(key: string, fallback: string): string {
+  try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; }
+}
+function setStored(key: string, value: string) {
+  try { localStorage.setItem(key, value); } catch { /* noop */ }
+}
+
 function getStoredLevel(): Level {
-  try {
-    const v = localStorage.getItem(STORAGE_KEY);
-    if (v === '2') return 2;
-  } catch { /* noop */ }
-  return 1;
+  return getStored(STORAGE_KEY_LEVEL, '1') === '2' ? 2 : 1;
+}
+
+function getStoredStars(): number {
+  return parseInt(getStored(STORAGE_KEY_STARS, '0'), 10) || 0;
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -144,16 +152,11 @@ function DraggableClock({ size, selectedHour, onHourChange }: DraggableClockProp
 
 // --- Main Game ---
 
-interface Round {
-  shownHour: number;
-  correctAnswer: number;
-}
-
 type GameState = 'playing' | 'correct' | 'trying-again' | 'complete';
 
 export default function ClockNext() {
   const [level, setLevel] = useState<Level>(getStoredLevel);
-  const [rounds, setRounds] = useState<Round[]>(() => generateRoundData());
+  const [hours, setHours] = useState<number[]>(() => generateRounds());
   const [currentRound, setCurrentRound] = useState(0);
   const [completed, setCompleted] = useState(0);
   const [state, setState] = useState<GameState>('playing');
@@ -163,19 +166,14 @@ export default function ClockNext() {
   const [encouragement, setEncouragement] = useState('');
   const [shakeKey, setShakeKey] = useState(0);
   const [animKey, setAnimKey] = useState(0);
+  const [stars, setStars] = useState(getStoredStars);
+  const [sessionStars, setSessionStars] = useState(0);
 
-  function generateRoundData(): Round[] {
-    return generateRounds().map(h => ({
-      shownHour: h,
-      correctAnswer: h === 12 ? 1 : h + 1,
-    }));
-  }
-
-  const initRound = useCallback((roundData: Round[], idx: number) => {
-    const round = roundData[idx];
-    if (!round) return;
-    const wrong = wrongHours(round.correctAnswer, 2);
-    setOptions(shuffle([round.correctAnswer, ...wrong]));
+  const initRound = useCallback((roundHours: number[], idx: number) => {
+    const hour = roundHours[idx];
+    if (hour == null) return;
+    const wrong = wrongHours(hour, 2);
+    setOptions(shuffle([hour, ...wrong]));
     setEliminatedOptions(new Set());
     setDragHour(12);
     setEncouragement('');
@@ -185,14 +183,24 @@ export default function ClockNext() {
 
   // Initialize first round
   useState(() => {
-    const r = generateRoundData();
-    setRounds(r);
-    initRound(r, 0);
+    const h = generateRounds();
+    setHours(h);
+    initRound(h, 0);
   });
 
-  const round = rounds[currentRound] as Round | undefined;
+  const currentHour = hours[currentRound] as number | undefined;
+
+  const addStar = useCallback(() => {
+    setStars(s => {
+      const next = s + 1;
+      setStored(STORAGE_KEY_STARS, String(next));
+      return next;
+    });
+    setSessionStars(s => s + 1);
+  }, []);
 
   const advanceRound = useCallback(() => {
+    addStar();
     const newCompleted = completed + 1;
     setCompleted(newCompleted);
 
@@ -201,43 +209,41 @@ export default function ClockNext() {
     } else {
       const next = currentRound + 1;
       setCurrentRound(next);
-      initRound(rounds, next);
+      initRound(hours, next);
     }
-  }, [completed, currentRound, rounds, initRound]);
+  }, [completed, currentRound, hours, initRound, addStar]);
 
   const handleAnswer = useCallback((answer: number) => {
-    if ((state !== 'playing' && state !== 'trying-again') || !round) return;
+    if ((state !== 'playing' && state !== 'trying-again') || currentHour == null) return;
 
-    if (answer === round.correctAnswer) {
+    if (answer === currentHour) {
       setState('correct');
       setTimeout(advanceRound, 800);
     } else {
-      // Wrong: gentle encouragement, eliminate that option, stay on question
       setEliminatedOptions(prev => new Set([...prev, answer]));
       setEncouragement(ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)]);
       setShakeKey(k => k + 1);
       setState('trying-again');
-      // Let them try again immediately
-      setTimeout(() => setState('trying-again'), 10);
     }
-  }, [state, round, advanceRound]);
+  }, [state, currentHour, advanceRound]);
 
   const handleLevel1Submit = useCallback(() => {
-    if (!round) return;
+    if (currentHour == null) return;
     handleAnswer(dragHour);
-  }, [round, dragHour, handleAnswer]);
+  }, [currentHour, dragHour, handleAnswer]);
 
   const restart = useCallback(() => {
-    const r = generateRoundData();
-    setRounds(r);
+    const h = generateRounds();
+    setHours(h);
     setCurrentRound(0);
     setCompleted(0);
-    initRound(r, 0);
+    setSessionStars(0);
+    initRound(h, 0);
   }, [initRound]);
 
   const handleLevelChange = (newLevel: Level) => {
     setLevel(newLevel);
-    try { localStorage.setItem(STORAGE_KEY, String(newLevel)); } catch { /* noop */ }
+    setStored(STORAGE_KEY_LEVEL, String(newLevel));
     restart();
   };
 
@@ -245,15 +251,17 @@ export default function ClockNext() {
   if (state === 'complete') {
     return (
       <div style={{
-        minHeight: '100dvh',
+        height: '100dvh',
         background: 'var(--color-bg)',
         fontFamily: 'var(--font-family)',
-        padding: '16px',
+        padding: '24px 16px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         gap: '20px',
+        overflow: 'hidden',
+        boxSizing: 'border-box',
       }}>
         <div style={{
           fontSize: 'clamp(4rem, 15vw, 8rem)',
@@ -270,8 +278,16 @@ export default function ClockNext() {
           textAlign: 'center',
           animation: 'popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.1s both',
         }}>
-          Amazing!
+          Amazing! ⭐ +{sessionStars}
         </h2>
+        <p style={{
+          color: '#8a8a9b',
+          fontSize: '1rem',
+          fontWeight: 800,
+          animation: 'popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.15s both',
+        }}>
+          Total stars: ⭐ {stars}
+        </p>
         <button
           onClick={restart}
           style={{
@@ -289,24 +305,25 @@ export default function ClockNext() {
     );
   }
 
-  if (!round) return null;
+  if (currentHour == null) return null;
 
-  const clockSize = Math.min(180, typeof window !== 'undefined' ? window.innerWidth * 0.45 : 180);
+  const clockSize = Math.min(240, typeof window !== 'undefined' ? window.innerWidth * 0.55 : 240);
 
   return (
     <div style={{
-      minHeight: '100dvh',
+      height: '100dvh',
       background: 'var(--color-bg)',
       fontFamily: 'var(--font-family)',
-      padding: '12px 16px 16px',
+      padding: '24px 16px 20px',
       boxSizing: 'border-box',
       display: 'flex',
       flexDirection: 'column',
+      overflow: 'hidden',
     }}>
-      {/* Compact header */}
-      <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+      {/* Header */}
+      <div style={{ textAlign: 'center', marginBottom: '12px' }}>
         <h1 style={{
-          fontSize: 'clamp(1.4rem, 5vw, 2rem)',
+          fontSize: 'clamp(1.8rem, 6vw, 2.8rem)',
           fontWeight: 900,
           margin: 0,
           background: 'linear-gradient(135deg, #a55eea, #45aaf2)',
@@ -314,23 +331,23 @@ export default function ClockNext() {
           WebkitTextFillColor: 'transparent',
           letterSpacing: '-0.5px',
         }}>
-          🕐 What Comes Next?
+          🕐 Read O'Clock
         </h1>
       </div>
 
-      {/* Controls row — compact */}
+      {/* Controls row */}
       <div style={{
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
         gap: '10px',
-        marginBottom: '12px',
+        marginBottom: '16px',
       }}>
         <div style={{
           display: 'flex',
           background: 'white',
           borderRadius: '50px',
-          padding: '3px',
+          padding: '4px',
           boxShadow: 'var(--shadow)',
           border: '2px solid var(--color-border)',
         }}>
@@ -341,8 +358,8 @@ export default function ClockNext() {
               style={{
                 border: 'none',
                 borderRadius: '50px',
-                padding: '6px 14px',
-                fontSize: '0.8rem',
+                padding: '8px 18px',
+                fontSize: '0.9rem',
                 fontWeight: 800,
                 fontFamily: 'inherit',
                 cursor: 'pointer',
@@ -360,11 +377,22 @@ export default function ClockNext() {
           background: 'linear-gradient(135deg, #a55eea, #4b7bec)',
           color: 'white',
           borderRadius: '50px',
-          padding: '3px 12px',
-          fontSize: '0.8rem',
+          padding: '4px 14px',
+          fontSize: '0.85rem',
           fontWeight: 800,
         }}>
           {completed + 1} / {ROUNDS}
+        </div>
+        {/* Star counter */}
+        <div style={{
+          background: 'linear-gradient(135deg, #F9CA24, #FF9F43)',
+          color: 'white',
+          borderRadius: '50px',
+          padding: '4px 12px',
+          fontSize: '0.85rem',
+          fontWeight: 800,
+        }}>
+          ⭐ {stars}
         </div>
       </div>
 
@@ -375,43 +403,36 @@ export default function ClockNext() {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: '14px',
+        gap: '16px',
         maxWidth: '500px',
         margin: '0 auto',
         width: '100%',
+        minHeight: 0,
       }}>
         {level === 2 ? (
-          /* LEVEL 2: Clock displayed → pick next hour from text */
+          /* LEVEL 2: Clock displayed → pick what time it shows from text */
           <>
             <div key={`clock-${animKey}`} style={{
               animation: 'popIn 0.4s cubic-bezier(0.34,1.56,0.64,1)',
             }}>
-              <Clock hour={round.shownHour} minute={0} size={clockSize} />
+              <Clock hour={currentHour} minute={0} size={clockSize} />
             </div>
 
             <p style={{
               color: '#8a8a9b',
-              fontSize: '0.9rem',
+              fontSize: '1rem',
               fontWeight: 800,
               textAlign: 'center',
               margin: 0,
             }}>
-              What comes after this?
+              What time is it?
             </p>
 
             {/* Encouragement message */}
-            <div style={{
-              height: '20px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
+            <div style={{ height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {encouragement && (
                 <p key={shakeKey} style={{
-                  color: '#FF9F43',
-                  fontSize: '0.85rem',
-                  fontWeight: 800,
-                  margin: 0,
+                  color: '#FF9F43', fontSize: '0.85rem', fontWeight: 800, margin: 0,
                   animation: 'popIn 0.3s cubic-bezier(0.34,1.56,0.64,1)',
                 }}>
                   {encouragement}
@@ -422,33 +443,21 @@ export default function ClockNext() {
             <div style={{
               display: 'flex',
               flexDirection: 'column',
-              gap: '8px',
+              gap: '10px',
               width: '100%',
-              maxWidth: '300px',
+              maxWidth: '340px',
             }}>
               {options.map((hour, i) => {
                 const isEliminated = eliminatedOptions.has(hour);
-                const isCorrectAndSelected = state === 'correct' && hour === round.correctAnswer;
+                const isCorrectAndSelected = state === 'correct' && hour === currentHour;
 
                 if (isEliminated) return (
-                  <button
-                    key={`${animKey}-${hour}`}
-                    disabled
-                    style={{
-                      background: '#f8f8fc',
-                      border: '2.5px solid #e8e8f0',
-                      borderRadius: '14px',
-                      padding: '12px 16px',
-                      fontSize: 'clamp(1.1rem, 3.5vw, 1.4rem)',
-                      fontWeight: 800,
-                      fontFamily: 'inherit',
-                      color: '#ccc',
-                      cursor: 'default',
-                      textAlign: 'center',
-                      textDecoration: 'line-through',
-                      opacity: 0.5,
-                    }}
-                  >
+                  <button key={`${animKey}-${hour}`} disabled style={{
+                    background: '#f8f8fc', border: '2.5px solid #e8e8f0', borderRadius: '14px',
+                    padding: '16px 20px', fontSize: 'clamp(1.2rem, 4vw, 1.6rem)', fontWeight: 800,
+                    fontFamily: 'inherit', color: '#ccc', cursor: 'default', textAlign: 'center',
+                    textDecoration: 'line-through', opacity: 0.5,
+                  }}>
                     {formatHourText(hour)}
                   </button>
                 );
@@ -462,8 +471,8 @@ export default function ClockNext() {
                       background: isCorrectAndSelected ? '#e8ffe8' : 'white',
                       border: `2.5px solid ${isCorrectAndSelected ? '#26de81' : '#e0e0f0'}`,
                       borderRadius: '14px',
-                      padding: '12px 16px',
-                      fontSize: 'clamp(1.1rem, 3.5vw, 1.4rem)',
+                      padding: '16px 20px',
+                      fontSize: 'clamp(1.2rem, 4vw, 1.6rem)',
                       fontWeight: 800,
                       fontFamily: 'inherit',
                       color: isCorrectAndSelected ? '#1a8a4a' : 'var(--color-text)',
@@ -497,24 +506,24 @@ export default function ClockNext() {
               background: 'white',
               border: '2.5px solid #a55eea',
               borderRadius: '16px',
-              padding: '12px 24px',
+              padding: '18px 28px',
               boxShadow: '0 4px 16px #a55eea20',
               animation: 'popIn 0.4s cubic-bezier(0.34,1.56,0.64,1)',
             }}>
               <p style={{
-                fontSize: 'clamp(1.3rem, 4.5vw, 1.8rem)',
+                fontSize: 'clamp(1.4rem, 5vw, 2rem)',
                 fontWeight: 900,
                 color: 'var(--color-text)',
                 margin: 0,
                 textAlign: 'center',
               }}>
-                {formatHourText(round.correctAnswer)}
+                {formatHourText(currentHour)}
               </p>
             </div>
 
             <p style={{
               color: '#8a8a9b',
-              fontSize: '0.85rem',
+              fontSize: '0.95rem',
               fontWeight: 800,
               textAlign: 'center',
               margin: 0,
@@ -532,30 +541,21 @@ export default function ClockNext() {
               />
             </div>
 
-            {/* Show current selection */}
             <p style={{
-              fontSize: '1rem',
+              fontSize: '1.1rem',
               fontWeight: 800,
-              color: dragHour === round.correctAnswer ? '#26de81' : '#8a8a9b',
+              color: dragHour === currentHour ? '#26de81' : '#8a8a9b',
               transition: 'color 0.2s',
               margin: 0,
             }}>
               {formatHourText(dragHour)}
             </p>
 
-            {/* Encouragement message */}
-            <div style={{
-              height: '20px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
+            {/* Encouragement */}
+            <div style={{ height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {encouragement && (
                 <p key={shakeKey} style={{
-                  color: '#FF9F43',
-                  fontSize: '0.85rem',
-                  fontWeight: 800,
-                  margin: 0,
+                  color: '#FF9F43', fontSize: '0.85rem', fontWeight: 800, margin: 0,
                   animation: 'popIn 0.3s cubic-bezier(0.34,1.56,0.64,1)',
                 }}>
                   {encouragement}
@@ -563,12 +563,8 @@ export default function ClockNext() {
               )}
             </div>
 
-            {/* Submit / feedback */}
             {state === 'correct' ? (
-              <div style={{
-                fontSize: '1.8rem',
-                animation: 'popIn 0.3s cubic-bezier(0.34,1.56,0.64,1)',
-              }}>
+              <div style={{ fontSize: '1.8rem', animation: 'popIn 0.3s cubic-bezier(0.34,1.56,0.64,1)' }}>
                 ⭐
               </div>
             ) : (
@@ -577,7 +573,7 @@ export default function ClockNext() {
                 style={{
                   background: 'linear-gradient(135deg, #a55eea, #4b7bec)',
                   color: 'white', border: 'none', borderRadius: '50px',
-                  padding: '12px 32px', fontSize: '1rem', fontWeight: 800,
+                  padding: '14px 36px', fontSize: '1.1rem', fontWeight: 800,
                   cursor: 'pointer', fontFamily: 'inherit',
                   boxShadow: '0 6px 20px #a55eea35',
                 }}
@@ -589,13 +585,13 @@ export default function ClockNext() {
         )}
       </div>
 
-      {/* Progress bar — at bottom */}
+      {/* Progress bar */}
       <div style={{
-        maxWidth: '300px',
-        margin: '12px auto 0',
-        height: '6px',
+        maxWidth: '340px',
+        margin: '16px auto 0',
+        height: '8px',
         background: '#f0f0f8',
-        borderRadius: '3px',
+        borderRadius: '4px',
         overflow: 'hidden',
         width: '100%',
       }}>
@@ -603,7 +599,7 @@ export default function ClockNext() {
           height: '100%',
           width: `${(completed / ROUNDS) * 100}%`,
           background: 'linear-gradient(135deg, #a55eea, #4b7bec)',
-          borderRadius: '3px',
+          borderRadius: '4px',
           transition: 'width 0.4s ease-out',
         }} />
       </div>
