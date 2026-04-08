@@ -1,26 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
-import { WORDS } from './words';
+import {
+  LEVEL1_WORDS, LEVEL2_WORDS,
+  LEVEL1_ADJ, LEVEL2_ADJ,
+  getChangedLetters,
+} from './words';
 
-const DEDUPED = [...new Set(WORDS)];
+type Level = 1 | 2;
 
-function diffByOne(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let d = 0;
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i] && ++d > 1) return false;
-  }
-  return d === 1;
+const STORAGE_KEY = 'wordChainLevel';
+
+function getStoredLevel(): Level {
+  try {
+    const v = localStorage.getItem(STORAGE_KEY);
+    if (v === '2') return 2;
+  } catch { /* noop */ }
+  return 1;
 }
-
-// Build adjacency list at module level (runs once)
-const ADJ: Record<string, string[]> = {};
-DEDUPED.forEach(w => { ADJ[w] = []; });
-for (let i = 0; i < DEDUPED.length; i++)
-  for (let j = i + 1; j < DEDUPED.length; j++)
-    if (diffByOne(DEDUPED[i], DEDUPED[j])) {
-      ADJ[DEDUPED[i]].push(DEDUPED[j]);
-      ADJ[DEDUPED[j]].push(DEDUPED[i]);
-    }
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -31,19 +26,25 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-function findChain(target: number, forcedStart: string | null = null): string[] {
+const CHAIN_LENGTH = 10;
+
+function findChain(level: Level, forcedStart: string | null = null): string[] {
+  const words = level === 1 ? LEVEL1_WORDS : LEVEL2_WORDS;
+  const adj = level === 1 ? LEVEL1_ADJ : LEVEL2_ADJ;
+
   let best: string[] = [];
-  const starts = forcedStart
-    ? [forcedStart, ...shuffle(DEDUPED.filter(w => w !== forcedStart)).slice(0, 39)]
-    : shuffle(DEDUPED).slice(0, 40);
+  const starts = forcedStart && adj[forcedStart]
+    ? [forcedStart, ...shuffle(words.filter(w => w !== forcedStart)).slice(0, 39)]
+    : shuffle(words).slice(0, 40);
 
   for (const start of starts) {
+    if (!adj[start]) continue;
     const chain = [start];
     const used = new Set([start]);
 
     function dfs(): boolean {
-      if (chain.length === target) return true;
-      const neighbors = shuffle(ADJ[chain[chain.length - 1]]);
+      if (chain.length === CHAIN_LENGTH) return true;
+      const neighbors = shuffle(adj[chain[chain.length - 1]] || []);
       for (const next of neighbors) {
         if (used.has(next)) continue;
         chain.push(next);
@@ -60,12 +61,6 @@ function findChain(target: number, forcedStart: string | null = null): string[] 
   }
 
   return best.length > 0 ? best : [starts[0]];
-}
-
-function changedIdx(prev: string, curr: string): number {
-  for (let i = 0; i < curr.length; i++)
-    if (prev[i] !== curr[i]) return i;
-  return -1;
 }
 
 const PALETTE = [
@@ -87,27 +82,27 @@ const CARD_COLORS = [
 ];
 
 export default function WordChain() {
-  const [target, setTarget] = useState(10);
+  const [level, setLevel] = useState<Level>(getStoredLevel);
   const [chain, setChain] = useState<string[]>([]);
   const [animKey, setAnimKey] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const generate = useCallback((len: number, startWord: string | null = null) => {
+  const generate = useCallback((lvl: Level, startWord: string | null = null) => {
     setIsGenerating(true);
     setTimeout(() => {
-      const c = findChain(len, startWord);
+      const c = findChain(lvl, startWord);
       setChain(c);
       setAnimKey(k => k + 1);
       setIsGenerating(false);
     }, 30);
   }, []);
 
-  useEffect(() => { generate(10); }, [generate]);
+  useEffect(() => { generate(level); }, [generate, level]);
 
-  const handleTarget = (delta: number) => {
-    const newTarget = Math.min(20, Math.max(3, target + delta));
-    setTarget(newTarget);
-    generate(newTarget);
+  const handleLevelChange = (newLevel: Level) => {
+    setLevel(newLevel);
+    try { localStorage.setItem(STORAGE_KEY, String(newLevel)); } catch { /* noop */ }
+    generate(newLevel);
   };
 
   const covered = new Set(chain.join('').split(''));
@@ -141,7 +136,7 @@ export default function WordChain() {
           margin: '6px 0 0',
           letterSpacing: '0.3px',
         }}>
-          Each word changes just <span style={{ color: '#a55eea' }}>one letter</span>!
+          Each word changes just <span style={{ color: '#a55eea' }}>one sound</span>!
         </p>
       </div>
 
@@ -154,53 +149,45 @@ export default function WordChain() {
         marginBottom: '32px',
         flexWrap: 'wrap',
       }}>
-        {/* Word count control */}
+        {/* Level selector */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '10px',
+          gap: '0',
           background: 'white',
           borderRadius: '50px',
-          padding: '10px 18px',
+          padding: '4px',
           boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
           border: '2px solid #f0f0f8',
         }}>
-          <span style={{ fontWeight: 800, color: '#5a5a7a', fontSize: '0.95rem' }}>Words</span>
-          <button
-            onClick={() => handleTarget(-1)}
-            disabled={target <= 3}
-            style={{
-              width: '30px', height: '30px', borderRadius: '50%',
-              border: 'none', background: target <= 3 ? '#e8e8f0' : '#FF6B6B',
-              color: target <= 3 ? '#bbb' : 'white',
-              fontWeight: 900, fontSize: '1.1rem', cursor: target <= 3 ? 'default' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: 'inherit', lineHeight: 1, padding: 0,
-              transition: 'all 0.2s',
-            }}
-          >−</button>
-          <span style={{
-            fontWeight: 900, fontSize: '1.5rem', minWidth: '30px',
-            textAlign: 'center', color: '#a55eea',
-          }}>{target}</span>
-          <button
-            onClick={() => handleTarget(1)}
-            disabled={target >= 20}
-            style={{
-              width: '30px', height: '30px', borderRadius: '50%',
-              border: 'none', background: target >= 20 ? '#e8e8f0' : '#26de81',
-              color: target >= 20 ? '#bbb' : 'white',
-              fontWeight: 900, fontSize: '1.1rem', cursor: target >= 20 ? 'default' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: 'inherit', lineHeight: 1, padding: 0,
-              transition: 'all 0.2s',
-            }}
-          >+</button>
+          {([1, 2] as Level[]).map(lvl => (
+            <button
+              key={lvl}
+              onClick={() => handleLevelChange(lvl)}
+              style={{
+                border: 'none',
+                borderRadius: '50px',
+                padding: '8px 18px',
+                fontSize: '0.9rem',
+                fontWeight: 800,
+                fontFamily: 'inherit',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                background: level === lvl
+                  ? 'linear-gradient(135deg, #a55eea, #4b7bec)'
+                  : 'transparent',
+                color: level === lvl ? 'white' : '#8a8a9b',
+                boxShadow: level === lvl ? '0 2px 8px #a55eea40' : 'none',
+              }}
+            >
+              {lvl === 1 ? 'Level 1' : 'Level 2'}
+            </button>
+          ))}
         </div>
 
         {/* Refresh button */}
         <button
-          onClick={() => generate(target, chain[chain.length - 1] || null)}
+          onClick={() => generate(level, chain[chain.length - 1] || null)}
           disabled={isGenerating}
           style={{
             background: 'linear-gradient(135deg, #a55eea, #4b7bec)',
@@ -217,10 +204,24 @@ export default function WordChain() {
         </button>
       </div>
 
+      {/* Level description */}
+      <p style={{
+        textAlign: 'center',
+        color: '#b0b0c8',
+        fontSize: '0.8rem',
+        fontWeight: 700,
+        marginTop: '-20px',
+        marginBottom: '24px',
+      }}>
+        {level === 1
+          ? 'Simple 3-letter words'
+          : 'Now with CH, SH, TH sounds!'}
+      </p>
+
       {/* Chain length note if shorter than requested */}
-      {!isGenerating && chain.length < target && chain.length > 0 && (
+      {!isGenerating && chain.length < CHAIN_LENGTH && chain.length > 0 && (
         <p style={{ textAlign: 'center', color: '#FF9F43', fontWeight: 700, fontSize: '0.85rem', marginBottom: '16px' }}>
-          ✨ Found a chain of {chain.length} words — try a shorter target!
+          ✨ Found a chain of {chain.length} words
         </p>
       )}
 
@@ -236,7 +237,7 @@ export default function WordChain() {
         minHeight: '80px',
       }}>
         {chain.map((word, i) => {
-          const ci = i > 0 ? changedIdx(chain[i - 1], word) : -1;
+          const changed = i > 0 ? getChangedLetters(chain[i - 1], word) : new Set<number>();
           const cc = CARD_COLORS[i % CARD_COLORS.length];
           const accentColor = PALETTE[i % PALETTE.length];
 
@@ -270,23 +271,26 @@ export default function WordChain() {
                   userSelect: 'none',
                 }}
               >
-                {word.split('').map((letter, li) => (
-                  <span
-                    key={li}
-                    style={{
-                      color: li === ci ? 'white' : '#3a3a5a',
-                      background: li === ci ? accentColor : 'transparent',
-                      borderRadius: '7px',
-                      padding: li === ci ? '0 4px' : '0 2px',
-                      display: 'inline-block',
-                      transition: 'all 0.2s',
-                      textTransform: 'uppercase',
-                      fontSize: li === ci ? '105%' : '100%',
-                    }}
-                  >
-                    {letter}
-                  </span>
-                ))}
+                {word.split('').map((letter, li) => {
+                  const isChanged = changed.has(li);
+                  return (
+                    <span
+                      key={li}
+                      style={{
+                        color: isChanged ? 'white' : '#3a3a5a',
+                        background: isChanged ? accentColor : 'transparent',
+                        borderRadius: '7px',
+                        padding: isChanged ? '0 4px' : '0 2px',
+                        display: 'inline-block',
+                        transition: 'all 0.2s',
+                        textTransform: 'uppercase',
+                        fontSize: isChanged ? '105%' : '100%',
+                      }}
+                    >
+                      {letter}
+                    </span>
+                  );
+                })}
               </div>
             </div>
           );
