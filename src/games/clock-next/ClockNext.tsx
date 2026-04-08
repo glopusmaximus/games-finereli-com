@@ -114,6 +114,8 @@ function DraggableClock({ size, selectedHour, onHourChange }: DraggableClockProp
         filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.1))',
         cursor: 'pointer',
         touchAction: 'none',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
       }}
       onPointerDown={e => { e.preventDefault(); handleStart(e.clientX, e.clientY); }}
       onPointerMove={e => handleMove(e.clientX, e.clientY)}
@@ -544,8 +546,7 @@ export default function ClockNext() {
             <p style={{
               fontSize: '1.1rem',
               fontWeight: 800,
-              color: dragHour === currentHour ? '#26de81' : '#8a8a9b',
-              transition: 'color 0.2s',
+              color: '#8a8a9b',
               margin: 0,
             }}>
               {formatHourText(dragHour)}
