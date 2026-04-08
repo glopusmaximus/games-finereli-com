@@ -42,17 +42,22 @@ export default function GameCard({ game, index }: Props) {
         e.currentTarget.style.boxShadow = `0 4px 16px ${colors.shadow}`;
       }}
     >
-      <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>
-        {game.icon}
-      </div>
-      <h2 style={{
-        fontSize: 'clamp(1.2rem, 4vw, 1.5rem)',
-        fontWeight: 900,
-        marginBottom: '6px',
-        color: 'var(--color-text)',
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        marginBottom: '8px',
       }}>
-        {game.title}
-      </h2>
+        <span style={{ fontSize: '2.2rem', lineHeight: 1 }}>{game.icon}</span>
+        <h2 style={{
+          fontSize: 'clamp(1.4rem, 5vw, 1.8rem)',
+          fontWeight: 900,
+          margin: 0,
+          color: 'var(--color-text)',
+        }}>
+          {game.title}
+        </h2>
+      </div>
       <p style={{
         fontSize: '0.9rem',
         fontWeight: 700,
