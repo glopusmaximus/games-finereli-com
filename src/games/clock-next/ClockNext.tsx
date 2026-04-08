@@ -114,8 +114,6 @@ function DraggableClock({ size, selectedHour, onHourChange }: DraggableClockProp
         filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.1))',
         cursor: 'pointer',
         touchAction: 'none',
-        userSelect: 'none',
-        WebkitUserSelect: 'none',
       }}
       onPointerDown={e => { e.preventDefault(); handleStart(e.clientX, e.clientY); }}
       onPointerMove={e => handleMove(e.clientX, e.clientY)}

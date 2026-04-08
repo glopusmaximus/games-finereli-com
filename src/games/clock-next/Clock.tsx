@@ -23,7 +23,7 @@ export default function Clock({ hour, minute, size = 240, animate = false }: Clo
       viewBox="0 0 100 100"
       width={size}
       height={size}
-      style={{ filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.1))', userSelect: 'none', WebkitUserSelect: 'none' }}
+      style={{ filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.1))' }}
     >
       {/* Clock face */}
       <circle cx={cx} cy={cy} r="46" fill="white" stroke="#e0e0f0" strokeWidth="2.5" />
